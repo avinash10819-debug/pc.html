@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Document to PC</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #eef2f3; text-align: center; padding: 20px; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        input[type="file"] { margin: 20px 0; padding: 10px; border: 2px dashed #007bff; width: 90%; border-radius: 8px; }
+        button { background: #28a745; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; }
+        button:disabled { background: #ccc; }
+        #msg { margin-top: 15px; font-weight: bold; color: #333; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>📤 कंप्यूटर पर फाइल भेजें</h2>
+    <p>अपनी फोटो या PDF डॉक्यूमेंट चुनें:</p>
+    <input type="file" id="fileInput" accept="image/*,application/pdf">
+    <button id="sendBtn" onclick="sendFile()" disabled>कंप्यूटर से जुड़ रहा है...</button>
+    <div id="msg"></div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const pcId = urlParams.get('id');
+    const peer = new Peer();
+    let conn = null;
+
+    const sendBtn = document.getElementById('sendBtn');
+    const msg = document.getElementById('msg');
+
+    peer.on('open', function() {
+        if (!pcId) {
+            msg.innerText = "❌ गलत QR कोड! कृपया फिर से स्कैन करें।";
+            return;
+        }
+        conn = peer.connect(pcId);
+        conn.on('open', function() {
+            sendBtn.disabled = false;
+            sendBtn.innerText = "🚀 कंप्यूटर पर भेजें (Send)";
+            msg.innerText = "✅ कंप्यूटर से कनेक्ट हो गया!";
+        });
+    });
+
+    function sendFile() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        if (!file) {
+            alert("कृपया पहले कोई फाइल या फोटो चुनें!");
+            return;
+        }
+
+        msg.innerText = "⏳ फाइल भेजी जा रही है...";
+        sendBtn.disabled = true;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            conn.send({
+                file: event.target.result,
+                fileName: file.name,
+                fileType: file.type
+            });
+            msg.innerText = "✅ फाइल सफलतापूर्वक कंप्यूटर पर भेज दी गई है!";
+            sendBtn.disabled = false;
+            fileInput.value = "";
+        };
+        reader.readAsArrayBuffer(file);
+    }
+</script>
+
+</body>
+</html>
