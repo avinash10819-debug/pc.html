@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Document Receiver - PC</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; text-align: center; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #qrcode { margin: 20px auto; display: inline-block; padding: 10px; border: 2px solid #007bff; border-radius: 8px; }
+        .status { color: green; font-weight: bold; margin-bottom: 20px; }
+        .file-list { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
+        .file-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; width: 250px; background: #fafafa; }
+        .file-card img { max-width: 100%; height: 150px; object-fit: contain; border-bottom: 1px solid #eee; margin-bottom: 10px; }
+        button { background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        .print-btn { background: #28a745; }
+        .print-btn:hover { background: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📄 डॉक्यूमेंट प्राप्त करें (QR Scan करें)</h2>
+    <p>ग्राहक से कहें कि इस QR कोड को अपने मोबाइल से स्कैन करें:</p>
+    <div id="qrcode"></div>
+    <div class="status" id="status">QR कोड तैयार हो रहा है...</div>
+    <hr>
+    <h3>प्राप्त हुए डॉक्यूमेंट्स (Received Files)</h3>
+    <div class="file-list" id="fileList"></div>
+</divconst MOBILE_PAGE_URL = "https://avinash10819-debug.github.io/pc.html/mobile.html";>
+
+<script>
+    // यहाँ अपना ऑनलाइन होस्ट किया हुआ mobile.html का लिंक डालें
+    const MOBILE_PAGE_URL = "https://YOUR-USERNAME.github.io/qr-print/mobile.html"; 
+
+    const peer = new Peer();
+    const statusDiv = document.getElementById('status');
+    const fileList = document.getElementById('fileList');
+
+    peer.on('open', function(id) {
+        statusDiv.innerText = "✅ सिस्टम तैयार है! स्कैन करने की प्रतीक्षा में...";
+        const fullUrl = `${MOBILE_PAGE_URL}?id=${id}`;
+        new QRCode(document.getElementById("qrcode"), {
+            text: fullUrl,
+            width: 200,
+            height: 200
+        });
+    });
+
+    peer.on('connection', function(conn) {
+        statusDiv.innerText = "📱 मोबाइल कनेक्ट हो गया है! फाइल आ रही है...";
+        conn.on('data', function(data) {
+            statusDiv.innerText = "✅ नई फाइल प्राप्त हुई!";
+            displayFile(data);
+        });
+    });
+
+    function displayFile(data) {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+
+        const blob = new Blob([data.file], { type: data.fileType });
+        const url = URL.createObjectURL(blob);
+
+        let previewHTML = '';
+        if (data.fileType.startsWith('image/')) {
+            previewHTML = `<img src="${url}" alt="Document">`;
+        } else {
+            previewHTML = `<div style="height:150px; display:flex; align-items:center; justify-content:center; font-size:40px;">📑 PDF/Doc</div>`;
+        }
+
+        card.innerHTML = `
+            ${previewHTML}
+            <p style="font-size:13px; word-break:break-all;"><b>${data.fileName}</b></p>
+            <button class="print-btn" onclick="printFile('${url}', '${data.fileType}')">🖨️ Print</button>
+            <a href="${url}" download="${data.fileName}"><button>⬇️ Save</button></a>
+        `;
+        fileList.prepend(card);
+    }
+
+    function printFile(url, type) {
+        const printWindow = window.open(url, '_blank');
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+</script>
+
+</body>
+</html>
